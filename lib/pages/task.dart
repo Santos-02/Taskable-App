@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'task_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Task extends StatefulWidget {
   const Task({super.key});
@@ -13,21 +14,43 @@ class _TaskState extends State<Task> {
   DateTime? selectedDateTime;
   String? selectedTag;
 
-  final List<String> availableTags = ['Trabalho', 'Faculdade', 'Casa'];
+  List<String> availableTags = [];
 
   bool isEditing = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final args = ModalRoute.of(context)!.settings.arguments as Map?;
-    if (args != null && args.containsKey('task')) {
-      final task = args['task'] as TaskModel;
-      controller.text = task.description;
-      selectedDateTime = task.dateTime;
-      selectedTag = task.tag;
-      isEditing = true;
+
+    if (!isEditing) {
+      final args = ModalRoute.of(context)!.settings.arguments as Map?;
+      if (args != null && args.containsKey('task')) {
+        final task = args['task'] as TaskModel;
+        controller.text = task.description;
+        selectedDateTime = task.dateTime;
+        selectedTag = task.tag;
+        isEditing = true;
+      }
     }
+  }
+
+  Future<void> _loadTags() async {
+    final prefs = await SharedPreferences.getInstance();
+    final tags = prefs.getStringList('tags');
+
+    setState(() {
+      if (tags != null && tags.isNotEmpty) {
+        availableTags = tags;
+      } else {
+        availableTags = ['Trabalho', 'Faculdade', 'Casa'];
+      }
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTags();
   }
 
   void pickDateTime() async {
@@ -99,15 +122,28 @@ class _TaskState extends State<Task> {
                       ? '${selectedDateTime!.day}/${selectedDateTime!.month}/${selectedDateTime!.year} ${selectedDateTime!.hour}:${selectedDateTime!.minute.toString().padLeft(2, '0')}'
                       : 'Nenhuma data selecionada',
                 ),
-                TextButton(
-                  onPressed: pickDateTime,
-                  child: const Text('Selecionar Data/Hora'),
+                Row(
+                  children: [
+                    TextButton(
+                      onPressed: pickDateTime,
+                      child: const Text('Selecionar'),
+                    ),
+                    if (selectedDateTime != null)
+                      IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.red),
+                        onPressed: () {
+                          setState(() {
+                            selectedDateTime = null;
+                          });
+                        },
+                      ),
+                  ],
                 ),
               ],
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: selectedTag,
+              value: availableTags.contains(selectedTag) ? selectedTag : null,
               hint: const Text('Selecione uma tag'),
               items:
                   availableTags.map((tag) {
@@ -122,6 +158,19 @@ class _TaskState extends State<Task> {
                 });
               },
             ),
+            if (selectedTag != null)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    setState(() {
+                      selectedTag = null;
+                    });
+                  },
+                  child: const Text('Remover tag'),
+                ),
+              ),
+
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: submit,

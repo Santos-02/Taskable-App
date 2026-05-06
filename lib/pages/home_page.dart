@@ -46,7 +46,7 @@ class _HomePageState extends State<HomePage> {
         });
       }
     } catch (e) {
-      // Ignora erros de leitura
+      print('Erro ao carregar tarefas: $e');
     }
   }
 
@@ -84,12 +84,13 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
+        foregroundColor: Colors.white,
         backgroundColor: Colors.deepPurple,
         actions: [
           IconButton(
             icon: const Icon(Icons.label),
             onPressed: () {
-              Navigator.pushNamed(context, '/tags');
+              Navigator.pushNamed(context, '/tags', arguments: tasks);
             },
           ),
         ],

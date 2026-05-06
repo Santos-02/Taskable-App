@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'task_model.dart';
 
 class Tag {
   final String name;
@@ -20,6 +22,8 @@ class _TagsState extends State<Tags> {
     Tag(name: 'Casa'),
   ];
 
+  List<TaskModel> tasks = [];
+
   final TextEditingController _controller = TextEditingController();
 
   void _addTag() {
@@ -29,6 +33,58 @@ class _TagsState extends State<Tags> {
         tags.add(Tag(name: name));
         _controller.clear();
       });
+      _saveTags();
+    }
+  }
+
+  Future<void> _saveTags() async {
+    final prefs = await SharedPreferences.getInstance();
+    final tagNames = tags.map((tag) => tag.name).toList();
+    await prefs.setStringList('tags', tagNames);
+  }
+
+  Future<void> _loadTags() async {
+    final prefs = await SharedPreferences.getInstance();
+    final tagNames = prefs.getStringList('tags');
+
+    setState(() {
+      if (tagNames != null) {
+        tags.clear();
+        tags.addAll(tagNames.map((name) => Tag(name: name)));
+      } else {
+        final defaultTags = ['Trabalho', 'Faculdade', 'Casa'];
+        tags.clear();
+        tags.addAll(defaultTags.map((name) => Tag(name: name)));
+        prefs.setStringList('tags', defaultTags);
+      }
+    });
+  }
+
+  void _deleteTag(int index) async {
+    setState(() {
+      tags.removeAt(index);
+    });
+    await _saveTags();
+  }
+
+  bool _isTagInUse(String tagName) {
+    return tasks.any((task) => task.tag == tagName);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTags();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final args = ModalRoute.of(context)!.settings.arguments;
+
+    if (args != null && args is List<TaskModel>) {
+      tasks = args;
     }
   }
 
@@ -60,7 +116,18 @@ class _TagsState extends State<Tags> {
                 itemCount: tags.length,
                 itemBuilder: (context, index) {
                   final tag = tags[index];
-                  return ListTile(title: Text(tag.name));
+                  final isInUse = _isTagInUse(tag.name);
+
+                  return ListTile(
+                    title: Text(tag.name),
+                    trailing: IconButton(
+                      icon: Icon(
+                        Icons.delete,
+                        color: isInUse ? Colors.grey : Colors.red,
+                      ),
+                      onPressed: isInUse ? null : () => _deleteTag(index),
+                    ),
+                  );
                 },
               ),
             ),
