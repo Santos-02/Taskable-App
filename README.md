@@ -95,8 +95,3 @@ Developed by João Lucas
 
 This project is licensed under the MIT License.
 
----
-
-## © Copyright
-
-© 2026 João Lucas. All rights reserved.
